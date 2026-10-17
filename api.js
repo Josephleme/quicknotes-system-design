@@ -1,4 +1,4 @@
-const API_URL = "https://typicode.com";
+const API_URL = "https://jsonplaceholder.typicode.com/posts";
 
 const loadBtn = document.getElementById("load-btn");
 const statusText = document.getElementById("status");
@@ -9,6 +9,7 @@ const bodyInput = document.getElementById("body-input");
 const submitBtn = document.getElementById("submit-btn");
 
 loadBtn.addEventListener("click", loadNotes);
+noteForm.addEventListener("submit", createNote);
 
 async function request(url, options = {}) {
     const response = await fetch(url, options);
@@ -72,6 +73,46 @@ async function loadNotes() {
         updateStatusMessage(`Loaded ${notes.length} notes from the server.`, "status-success");
     } catch (error) {
         updateStatusMessage(`Failed to load notes: ${error.message}`, "status-error");
+    } finally {
+        setActionStates(false);
+    }
+}
+
+async function createNote(event) {
+    event.preventDefault();
+
+    const title = titleInput.value.trim();
+    const body = bodyInput.value.trim();
+
+    if (!title) {
+        updateStatusMessage("Validation Error: Title is required.", "status-error");
+        return;
+    }
+
+    if (title.length > 100) {
+        updateStatusMessage("Validation Error: Title cannot exceed 100 characters.", "status-error");
+        return;
+    }
+
+    setActionStates(true);
+    updateStatusMessage("Creating note...", "status-loading");
+
+    try {
+        const response = await request(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ title, body, userId: 1 }),
+            headers: { "Content-type": "application/json; charset=UTF-8" }
+        });
+        
+        const newNote = await response.json();
+
+        const li = createNoteElement(newNote.id, newNote.title, newNote.body);
+        notesList.insertBefore(li, notesList.firstChild);
+
+        updateStatusMessage(`Note created (status ${response.status}, id ${newNote.id}).`, "status-success");
+        noteForm.reset();
+    } catch (error) {
+        updateStatusMessage(`Failed to create note: ${error.message}`, "status-error");
     } finally {
         setActionStates(false);
     }
