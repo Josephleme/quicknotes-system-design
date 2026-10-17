@@ -1,4 +1,4 @@
-const API_URL = "https://jsonplaceholder.typicode.com/posts";
+const API_URL = "https://typicode.com";
 
 const loadBtn = document.getElementById("load-btn");
 const statusText = document.getElementById("status");
@@ -22,6 +22,8 @@ async function request(url, options = {}) {
 function setActionStates(isLoading) {
     loadBtn.disabled = isLoading;
     submitBtn.disabled = isLoading;
+    const deleteButtons = notesList.querySelectorAll("button");
+    deleteButtons.forEach(btn => btn.disabled = isLoading);
 }
 
 function updateStatusMessage(text, className) {
@@ -41,9 +43,14 @@ function createNoteElement(id, title, body) {
     const p = document.createElement("p");
     p.textContent = body || "";
 
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => deleteNote(id, li));
+
     noteContent.appendChild(h3);
     noteContent.appendChild(p);
     li.appendChild(noteContent);
+    li.appendChild(deleteBtn);
 
     return li;
 }
@@ -113,6 +120,30 @@ async function createNote(event) {
         noteForm.reset();
     } catch (error) {
         updateStatusMessage(`Failed to create note: ${error.message}`, "status-error");
+    } finally {
+        setActionStates(false);
+    }
+}
+
+async function deleteNote(id, element) {
+    setActionStates(true);
+    updateStatusMessage("Deleting note...", "status-loading");
+
+    try {
+        const response = await request(`${API_URL}/${id}`, {
+            method: "DELETE"
+        });
+
+        element.remove();
+        updateStatusMessage(`Note deleted successfully (status ${response.status}).`, "status-success");
+
+        if (notesList.children.length === 0) {
+            const emptyLi = document.createElement("li");
+            emptyLi.textContent = "Your notes directory is empty.";
+            notesList.appendChild(emptyLi);
+        }
+    } catch (error) {
+        updateStatusMessage(`Failed to delete note: ${error.message}`, "status-error");
     } finally {
         setActionStates(false);
     }
